@@ -20,6 +20,7 @@ import org.apache.log4j.Level;
 import org.apache.log4j.Category;
 import org.apache.log4j.Logger;
 import org.apache.log4j.Appender;
+import org.apache.log4j.helpers.ShutdownEventListener;
 
 import java.util.Enumeration;
 import java.util.Vector;
@@ -128,4 +129,10 @@ public final class NOPLoggerRepository implements LoggerRepository {
      */
     public void resetConfiguration() {
     }
+
+    /**
+     * {@inheritDoc}
+     */
+	public void addShutdownEventListener(ShutdownEventListener listener) {
+	}
 }
