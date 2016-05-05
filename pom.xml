@@ -30,9 +30,12 @@
 
 	<developers>
 		<developer>
+			<id>victorzeng</id>
 			<name>Victor Zeng</name>
 			<email>Victor.Zxy@outlook.com</email>
-			<url>https://github.com/VictorZeng</url>
+			<roles><role>developer</role></roles>
+			<url>https://victorzeng.github.io/</url>
+			<organization>Dark Phoenixs</organization>
 		</developer>
 	</developers>
 
