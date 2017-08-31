@@ -5,9 +5,7 @@ import org.apache.log4j.helpers.LogLog;
 import java.io.File;
 import java.io.FileFilter;
 import java.io.IOException;
-import java.text.ParseException;
 import java.util.Arrays;
-import java.util.Date;
 
 /**
  * <p>Title: DailyExRollingFileAppender</p>
@@ -16,16 +14,26 @@ import java.util.Date;
  * @author Victor
  * @version 1.0
  * @see DailyRollingFileAppender
- * @since 2017/8/31
+ * @since 2017 /8/31
  */
 public class DailyExRollingFileAppender extends DailyRollingFileAppender {
 
     private int maxBackupIndex = 1;
 
+    /**
+     * Gets max backup index.
+     *
+     * @return the max backup index
+     */
     public int getMaxBackupIndex() {
         return maxBackupIndex;
     }
 
+    /**
+     * Sets max backup index.
+     *
+     * @param maxBackupIndex the max backup index
+     */
     public void setMaxBackupIndex(int maxBackupIndex) {
         this.maxBackupIndex = maxBackupIndex;
     }
@@ -33,46 +41,82 @@ public class DailyExRollingFileAppender extends DailyRollingFileAppender {
     @Override
     void rollOver() throws IOException {
 
-        super.rollOver();
+        /* Compute filename, but only if datePattern is specified */
+        if (getDatePattern() == null) {
+            errorHandler.error("Missing DatePattern option in rollOver().");
+            return;
+        }
 
+        String datedFilename = fileName + sdf.format(now);
+        // It is too early to roll over because we are still within the
+        // bounds of the current interval. Rollover will occur once the
+        // next interval is reached.
+        if (getScheduledFilename().equals(datedFilename)) {
+            return;
+        }
+
+        // close current file, and rename it to datedFilename
+        this.closeFile();
+
+        // delete file if the file exists.
+        File target = new File(getScheduledFilename());
+        if (target.exists()) {
+            target.delete();
+        }
+
+        // rename file to previous name.
         File file = new File(fileName);
+        boolean result = file.renameTo(target);
+        if (result) {
+            LogLog.debug(fileName + " -> " + getScheduledFilename());
+        } else {
+            LogLog.error("Failed to rename [" + fileName + "] to [" + getScheduledFilename() + "].");
+        }
 
-        //获取日志文件列表，控制数量，实现清理策略
+        try {
+            // This will also close the file. This is OK since multiple
+            // close operations are safe.
+            this.setFile(fileName, true, this.bufferedIO, this.bufferSize);
+        } catch (IOException e) {
+            errorHandler.error("setFile(" + fileName + ", true) call failed.");
+        }
+
+        setScheduledFilename(datedFilename);
+
+        /* Delete history files if more than maxBackupIndex */
         if (file.getParentFile().exists()) {
+
+            // get all history files.
             File[] files = file.getParentFile().listFiles(new LogFileFilter(file.getName()));
-            Long[] dateArray = new Long[files.length];
-            for (int i = 0; i < files.length; i++) {
-                File fileItem = files[i];
-                String fileDateStr = fileItem.getName().replace(file.getName(), "");
-                try {
-                    Date filedate = sdf.parse(fileDateStr);
-                    long fileDateLong = filedate.getTime();
-                    dateArray[i] = fileDateLong;
-                } catch (ParseException e) {
-                    LogLog.error("Parse File Date Throw Exception : " + e.getMessage());
-                }
-            }
 
-            Arrays.sort(dateArray);
+            // soft by date asc.
+            Arrays.sort(files);
 
-            if (dateArray.length > maxBackupIndex) {
-                for (int i = 0; i < dateArray.length - maxBackupIndex; i++) {
-                    String dateFileName = file.getPath() + sdf.format(dateArray[i]);
-                    File dateFile = new File(dateFileName);
+            // delete files if more than maxBackupIndex.
+            if (files.length > maxBackupIndex) {
+                for (int i = 0; i < files.length - maxBackupIndex; i++) {
+                    File dateFile = files[i];
                     if (dateFile.exists()) {
                         dateFile.delete();
                     }
                 }
             }
         }
-
     }
 }
 
+/**
+ * The type Log file filter.
+ */
 class LogFileFilter implements FileFilter {
 
     private String logName;
 
+    /**
+     * Instantiates a new Log file filter.
+     *
+     * @param logName the log name
+     */
     public LogFileFilter(String logName) {
         this.logName = logName;
     }
