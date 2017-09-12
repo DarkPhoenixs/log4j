@@ -1,5 +1,6 @@
 package org.apache.log4j;
 
+import org.apache.log4j.helpers.GZipUtils;
 import org.apache.log4j.helpers.LogLog;
 
 import java.io.File;
@@ -12,13 +13,21 @@ import java.util.Arrays;
  * <p>Description: DailyRollingFileAppender with maxBackupIndex</p>
  *
  * @author Victor
- * @version 1.0
+ * @version 1.3.1
  * @see DailyRollingFileAppender
  * @since 2017 /8/31
  */
 public class DailyExRollingFileAppender extends DailyRollingFileAppender {
 
+    /**
+     * @since 1.3.1
+     */
     private int maxBackupIndex = 1;
+
+    /**
+     * @since 1.3.2
+     */
+    private boolean fileCompress = false;
 
     /**
      * Gets max backup index.
@@ -36,6 +45,24 @@ public class DailyExRollingFileAppender extends DailyRollingFileAppender {
      */
     public void setMaxBackupIndex(int maxBackupIndex) {
         this.maxBackupIndex = maxBackupIndex;
+    }
+
+    /**
+     * Gets file compress.
+     *
+     * @return the boolean
+     */
+    public boolean getFileCompress() {
+        return fileCompress;
+    }
+
+    /**
+     * Sets file compress.
+     *
+     * @param fileCompress the file compress
+     */
+    public void setFileCompress(boolean fileCompress) {
+        this.fileCompress = fileCompress;
     }
 
     @Override
@@ -82,6 +109,16 @@ public class DailyExRollingFileAppender extends DailyRollingFileAppender {
         }
 
         setScheduledFilename(datedFilename);
+
+        /* Compress log file and delete source */
+        if (this.getFileCompress() && result) {
+
+            try {
+                GZipUtils.compress(target, true);
+            } catch (IOException e) {
+                LogLog.error("Failed to compress [" + target.getName() + "].", e);
+            }
+        }
 
         /* Delete history files if more than maxBackupIndex */
         if (file.getParentFile().exists()) {
