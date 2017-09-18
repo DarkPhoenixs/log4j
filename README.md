@@ -14,6 +14,6 @@ log4j.appender.infoAppender.fileCompress=true
 <dependency>
   <groupId>org.darkphoenixs</groupId>
   <artifactId>log4j</artifactId>
-  <version>1.3.2</version>
+  <version>1.3.3</version>
 </dependency>
 ```
