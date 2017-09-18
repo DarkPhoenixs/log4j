@@ -30,6 +30,11 @@ public class DailyExRollingFileAppender extends DailyRollingFileAppender {
     private boolean fileCompress = false;
 
     /**
+     * @since 1.3.3
+     */
+    private Thread compresCleanThread;
+
+    /**
      * Gets max backup index.
      *
      * @return the max backup index
@@ -110,34 +115,15 @@ public class DailyExRollingFileAppender extends DailyRollingFileAppender {
 
         setScheduledFilename(datedFilename);
 
-        /* Compress log file and delete source */
-        if (this.getFileCompress() && result) {
+        if (result) {
 
-            try {
-                GZipUtils.compress(target, true);
-            } catch (IOException e) {
-                LogLog.error("Failed to compress [" + target.getName() + "].", e);
-            }
-        }
+            compresCleanThread = new Thread(new CompressAndCleanThread(file, target, maxBackupIndex, fileCompress));
 
-        /* Delete history files if more than maxBackupIndex */
-        if (file.getParentFile().exists()) {
+            compresCleanThread.setDaemon(true);
 
-            // get all history files.
-            File[] files = file.getParentFile().listFiles(new LogFileFilter(file.getName()));
+            compresCleanThread.setName("DailyExRollingFileAppender-" + compresCleanThread.getName());
 
-            // soft by date asc.
-            Arrays.sort(files);
-
-            // delete files if more than maxBackupIndex.
-            if (files.length > maxBackupIndex) {
-                for (int i = 0; i < files.length - maxBackupIndex; i++) {
-                    File dateFile = files[i];
-                    if (dateFile.exists()) {
-                        dateFile.delete();
-                    }
-                }
-            }
+            compresCleanThread.start();
         }
     }
 }
@@ -166,6 +152,65 @@ class LogFileFilter implements FileFilter {
             LogLog.debug(file.getName());
             return file.getName().startsWith(logName) &&
                     !file.getName().equals(logName);
+        }
+    }
+}
+
+/**
+ * The type Compress and clean thread.
+ */
+class CompressAndCleanThread implements Runnable {
+
+    private final File sourceFile;
+    private final File targetFile;
+    private final int maxBackupIndex;
+    private final boolean fileCompress;
+
+    /**
+     * Instantiates a new Compress and clean thread.
+     *
+     * @param sourceFile     the source file
+     * @param targetFile     the target file
+     * @param maxBackupIndex the max backup index
+     * @param fileCompress   the file compress
+     */
+    public CompressAndCleanThread(File sourceFile, File targetFile, int maxBackupIndex, boolean fileCompress) {
+        this.sourceFile = sourceFile;
+        this.targetFile = targetFile;
+        this.maxBackupIndex = maxBackupIndex;
+        this.fileCompress = fileCompress;
+    }
+
+    @Override
+    public void run() {
+
+        /* Compress log file and delete source */
+        if (fileCompress) {
+            try {
+                GZipUtils.compress(targetFile, true);
+            } catch (IOException e) {
+                LogLog.error("Failed to compress [" + targetFile.getName() + "].", e);
+            }
+        }
+
+        /* Delete history files if more than maxBackupIndex */
+        if (maxBackupIndex > 0) {
+
+            // get all history files.
+            File[] files = sourceFile.getParentFile().listFiles(new LogFileFilter(sourceFile.getName()));
+
+            // soft by date asc.
+            Arrays.sort(files);
+
+            // delete files if more than maxBackupIndex.
+            if (files.length > maxBackupIndex) {
+                for (int i = 0; i < files.length - maxBackupIndex; i++) {
+                    File dateFile = files[i];
+                    if (dateFile.exists()) {
+                        dateFile.delete();
+                    }
+                }
+            }
         }
     }
 }
