@@ -217,24 +217,6 @@ public class DailyRollingFileAppender extends FileAppender {
         return datePattern;
     }
 
-    /**
-     * Gets scheduled filename.
-     *
-     * @return the scheduled filename
-     */
-    public String getScheduledFilename() {
-        return scheduledFilename;
-    }
-
-    /**
-     * Sets scheduled filename.
-     *
-     * @param scheduledFilename the scheduled filename
-     */
-    public void setScheduledFilename(String scheduledFilename) {
-        this.scheduledFilename = scheduledFilename;
-    }
-
     public void activateOptions() {
         super.activateOptions();
         if (datePattern != null && fileName != null) {
